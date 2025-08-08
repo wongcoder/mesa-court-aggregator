@@ -14,6 +14,10 @@ services:
     environment:
       - NODE_ENV=production
       - TZ=America/Phoenix  # Arizona timezone (no DST)
+      # Cloudflared tunnel configuration (optional)
+      # Get your token from: https://dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
+      # - CLOUDFLARED_TOKEN=your_tunnel_token_here
+      # - CLOUDFLARED_TUNNEL_NAME=mesa-court-aggregator  # Optional: custom tunnel name
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "const http = require('http'); const options = { hostname: 'localhost', port: 3000, path: '/health', timeout: 5000 }; const req = http.request(options, (res) => { if (res.statusCode === 200) { process.exit(0); } else { process.exit(1); } }); req.on('error', () => process.exit(1)); req.on('timeout', () => process.exit(1)); req.end();"]

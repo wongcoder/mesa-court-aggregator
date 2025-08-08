@@ -54,6 +54,12 @@ temp/
 # Documentation (will be added back selectively)
 docs/
 *.md
+# Keep cloudflared documentation
+!CLOUDFLARED.md
+
+# Environment files (security)
+.env
+.env.*
 
 # Kiro files
 .kiro/
