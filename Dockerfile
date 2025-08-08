@@ -34,8 +34,12 @@ RUN mkdir -p data && \
     chown -R courtapp:nodejs data && \
     chmod 755 data
 
-# Switch to non-root user
-USER courtapp
+# Create tmp directory for supervisord with proper permissions
+RUN mkdir -p /tmp && \
+    chmod 1777 /tmp
+
+# Don't switch to non-root user here - supervisord needs to run as root
+# to manage child processes and switch users
 
 # Expose port
 EXPOSE 3000
@@ -44,16 +48,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD sh -c ' \
     # Check Node.js application health \
-    node -e "const http = require(\"http\"); \
-      const options = { hostname: \"localhost\", port: 3000, path: \"/health\", timeout: 5000 }; \
-      const req = http.request(options, (res) => { \
-        if (res.statusCode === 200) { process.exit(0); } else { process.exit(1); } \
-      }); \
-      req.on(\"error\", () => process.exit(1)); \
-      req.on(\"timeout\", () => process.exit(1)); \
-      req.end();" && \
+    wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1; \
     # Check if supervisord is managing processes correctly \
-    supervisorctl -c /etc/supervisor/conf.d/supervisord.conf status nodejs | grep -q RUNNING'
+    supervisorctl -c /etc/supervisor/conf.d/supervisord.conf status nodejs | grep -q RUNNING || exit 1'
 
 # Start the application with supervisord
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
