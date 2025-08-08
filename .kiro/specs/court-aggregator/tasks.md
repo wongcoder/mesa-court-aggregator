@@ -142,7 +142,7 @@
   - Optimize backfill performance to avoid overwhelming the API
   - _Requirements: 3.4, 3.5_
 
-- [-] 17. Add PDF helper link functionality
+- [x] 17. Add PDF helper link functionality
 
   - Display helper links for parks that have associated PDF calendars
   - Implement click handlers to open PDF calendars in new tabs
@@ -169,7 +169,7 @@
   - Handle network connectivity issues gracefully
   - _Requirements: 9.1, 9.2, 9.4, 10.4_
 
-- [ ] 21. Implement comprehensive testing
+- [x] 21. Implement comprehensive testing
 
   - Write unit tests for all core functions and modules
   - Create integration tests for API endpoints and data flow
@@ -200,6 +200,7 @@
   - _Note: Comprehensive unit tests already implemented for all services_
 
 - [x] 22. Fix time window display to start at 9:00 AM with hourly UI intervals
+
   - Update time slot generation to start at 9:00 AM instead of 8:30 AM
   - Modify UI to display hourly time windows (9:00 AM, 10:00 AM, etc.) while maintaining 30-minute internal granularity
   - Update weekly and daily view time slot rendering to show hourly intervals
@@ -207,7 +208,7 @@
   - Update time slot calculation functions to use 9:00 AM as the starting point
   - _Requirements: 2.2, 2.3_
 
-- [ ] 23. Create deployment and documentation
+- [x] 23. Create deployment and documentation
   - Write installation and setup instructions for Pi
   - Create configuration documentation for API endpoints
   - Add troubleshooting guide for common issues

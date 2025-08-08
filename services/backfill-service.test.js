@@ -43,7 +43,7 @@ describe('BackfillService', () => {
       expect(kleinman).toEqual({
         id: 29,
         name: 'Kleinman Park',
-        startTime: '08:30:00',
+        startTime: '09:00:00',
         endTime: '22:00:00',
         pdfLink: expect.stringContaining('kleinman-pickleball-court.pdf')
       });
@@ -52,7 +52,7 @@ describe('BackfillService', () => {
       expect(geneAutry).toEqual({
         id: 33,
         name: 'Gene Autry Park',
-        startTime: '08:30:00',
+        startTime: '09:00:00',
         endTime: '22:00:00',
         pdfLink: null
       });
@@ -61,7 +61,7 @@ describe('BackfillService', () => {
       expect(monterey).toEqual({
         id: 35,
         name: 'Monterey Park',
-        startTime: '08:30:00',
+        startTime: '09:00:00',
         endTime: '22:00:00',
         pdfLink: expect.stringContaining('brady-pickleball-court.pdf')
       });
@@ -81,7 +81,7 @@ describe('BackfillService', () => {
         "change_time_range": false,
         "reload": false,
         "resident": true,
-        "start_time": '08:30:00',
+        "start_time": '09:00:00',
         "end_time": '22:00:00'
       });
     });
@@ -113,7 +113,7 @@ describe('BackfillService', () => {
         },
         body: {
           availability: {
-            time_slots: ['08:30:00', '09:00:00'],
+            time_slots: ['09:00:00', '09:30:00'],
             resources: [
               {
                 resource_id: 611,
@@ -157,7 +157,7 @@ describe('BackfillService', () => {
           "change_time_range": false,
           "reload": false,
           "resident": true,
-          "start_time": '08:30:00',
+          "start_time": '09:00:00',
           "end_time": '22:00:00'
         },
         expect.objectContaining({
@@ -436,19 +436,19 @@ describe('BackfillService', () => {
           {
             id: 29,
             name: 'Kleinman Park',
-            timeRange: '08:30:00 - 22:00:00',
+            timeRange: '09:00:00 - 22:00:00',
             hasPdfLink: true
           },
           {
             id: 33,
             name: 'Gene Autry Park',
-            timeRange: '08:30:00 - 22:00:00',
+            timeRange: '09:00:00 - 22:00:00',
             hasPdfLink: false
           },
           {
             id: 35,
             name: 'Monterey Park',
-            timeRange: '08:30:00 - 22:00:00',
+            timeRange: '09:00:00 - 22:00:00',
             hasPdfLink: true
           }
         ],

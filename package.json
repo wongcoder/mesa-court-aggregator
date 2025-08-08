@@ -1,7 +1,7 @@
 {
-  "name": "court-aggregator",
+  "name": "mesa-court-aggregator",
   "version": "1.0.0",
-  "description": "Court availability aggregator with calendar interface",
+  "description": "Mesa court availability aggregator with calendar interface",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
