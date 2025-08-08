@@ -16,6 +16,14 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    # Security options to prevent SIGSYS issues with cloudflared on Raspberry Pi
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    privileged: false
     healthcheck:
       test:
         [

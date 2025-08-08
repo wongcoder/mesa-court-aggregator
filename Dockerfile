@@ -9,7 +9,14 @@ WORKDIR /app
 
 # Install cloudflared and supervisord
 RUN apk add --no-cache supervisor wget && \
-    wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -O /usr/local/bin/cloudflared && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -O /usr/local/bin/cloudflared; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
     chmod +x /usr/local/bin/cloudflared
 
 # Create non-root user for security

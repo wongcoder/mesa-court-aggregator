@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  mesa-court-aggregator:
+    build: .
+    container_name: mesa-court-aggregator
+    network_mode: host
+    volumes:
+      # Persist data directory for cache files
+      - ./data:/app/data
+      # Optional: Mount logs directory
+      - ./logs:/app/logs
+    # Load environment variables from .env file
+    env_file:
+      - .env
+    restart: unless-stopped
+    # Security options for Raspberry Pi cloudflared issues
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
