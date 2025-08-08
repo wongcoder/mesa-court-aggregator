@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   mesa-court-aggregator:
@@ -13,14 +13,20 @@ services:
       - ./logs:/app/logs
     environment:
       - NODE_ENV=production
-      - TZ=America/Phoenix  # Arizona timezone (no DST)
+      - TZ=America/Phoenix # Arizona timezone (no DST)
       # Cloudflared tunnel configuration (optional)
       # Get your token from: https://dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
       # - CLOUDFLARED_TOKEN=your_tunnel_token_here
       # - CLOUDFLARED_TUNNEL_NAME=mesa-court-aggregator  # Optional: custom tunnel name
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "const http = require('http'); const options = { hostname: 'localhost', port: 3000, path: '/health', timeout: 5000 }; const req = http.request(options, (res) => { if (res.statusCode === 200) { process.exit(0); } else { process.exit(1); } }); req.on('error', () => process.exit(1)); req.on('timeout', () => process.exit(1)); req.end();"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const http = require('http'); const options = { hostname: 'localhost', port: 3000, path: '/health', timeout: 5000 }; const req = http.request(options, (res) => { if (res.statusCode === 200) { process.exit(0); } else { process.exit(1); } }); req.on('error', () => process.exit(1)); req.on('timeout', () => process.exit(1)); req.end();",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -30,10 +36,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Resource limits for Raspberry Pi
+    # Resource limits for 8GB system
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 2G
+          cpus: "2.0"
         reservations:
-          memory: 256M
+          memory: 512M
+          cpus: "0.5"
