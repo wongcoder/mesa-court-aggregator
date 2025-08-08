@@ -33,12 +33,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Resource limits for 8GB system
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2.0"
-        reservations:
-          memory: 512M
-          cpus: "0.5"
+    # Resource limits removed due to kernel compatibility
+    # If your system supports cgroups v2, you can uncomment:
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2G
+    #       cpus: "2.0"
