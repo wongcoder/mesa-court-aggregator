@@ -24,14 +24,8 @@ fi
 
 echo "INFO: CLOUDFLARED_TOKEN found, starting tunnel..."
 
-# Set tunnel name if provided
-TUNNEL_ARGS="--token $CLOUDFLARED_TOKEN --url http://localhost:3000"
-
-if [ -n "$CLOUDFLARED_TUNNEL_NAME" ]; then
-    echo "INFO: Using tunnel name: $CLOUDFLARED_TUNNEL_NAME"
-    TUNNEL_ARGS="$TUNNEL_ARGS --name $CLOUDFLARED_TUNNEL_NAME"
-fi
-
 # Start cloudflared with error handling
 echo "INFO: Connecting to Cloudflare tunnel..."
-exec cloudflared tunnel --no-autoupdate run $TUNNEL_ARGS
+
+# The token contains all the tunnel information, so we don't need to specify the tunnel name separately
+exec cloudflared tunnel --no-autoupdate run --token "$CLOUDFLARED_TOKEN" --url http://localhost:3000
