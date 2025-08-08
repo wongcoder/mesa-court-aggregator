@@ -37,9 +37,9 @@ COPY --chown=courtapp:nodejs tunnel-start.sh /usr/local/bin/tunnel-start.sh
 RUN chmod +x /usr/local/bin/tunnel-start.sh
 
 # Create data directory with proper permissions
-RUN mkdir -p data && \
+RUN RUN mkdir -p data && \
     chown -R courtapp:nodejs data && \
-    chmod 755 data
+    chmod 775 data
 
 # Create tmp directory for supervisord with proper permissions
 RUN mkdir -p /tmp && \
