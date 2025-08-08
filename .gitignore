@@ -57,6 +57,3 @@ temp/
 
 # Docker
 .dockerignore
-
-# Kiro files
-.kiro/

@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "sessionRefreshedOn": null,
+    "sessionExtendedCount": 0,
+    "response_code": "0012",
+    "response_message": "Invalid CSRF token",
+    "page_info": {
+      "order_by": "",
+      "total_records_per_page": 30,
+      "page_number": 1,
+      "total_records": 0,
+      "order_option": "ASC",
+      "total_page": 1
+    }
+  },
+  "body": {}
+}

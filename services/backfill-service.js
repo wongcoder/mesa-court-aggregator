@@ -487,6 +487,278 @@ class BackfillService {
   }
 
   /**
+   * Clean up outdated cache files
+   * Removes problematic cache files and creates backups for safety
+   * @param {Object} options - Cleanup options
+   * @param {number} options.maxAgeDays - Maximum age in days for cache files (default: 30)
+   * @param {Array<string>} options.problematicFiles - List of known problematic files to remove
+   * @returns {Promise<Object>} Cleanup result
+   */
+  async cleanupOutdatedCacheFiles(options = {}) {
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    const {
+      maxAgeDays = 30,
+      problematicFiles = ['2025-08.json']
+    } = options;
+
+    const startTime = Date.now();
+    this.log('INFO', 'Starting cache cleanup operation', {
+      maxAgeDays,
+      problematicFiles
+    });
+
+    try {
+      const dataDir = 'data';
+      const backupDir = 'data/backups';
+      
+      // Ensure backup directory exists
+      try {
+        await fs.mkdir(backupDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist, that's fine
+      }
+
+      // Read directory contents
+      const files = await fs.readdir(dataDir);
+      const cacheFiles = files.filter(file => 
+        file.endsWith('.json') && 
+        file !== '.gitkeep' && 
+        !file.startsWith('backup-')
+      );
+
+      this.log('INFO', `Found ${cacheFiles.length} cache files to evaluate`, {
+        files: cacheFiles
+      });
+
+      const filesToRemove = [];
+      const maxAge = maxAgeDays * 24 * 60 * 60 * 1000; // Convert days to milliseconds
+      
+      // Evaluate each cache file
+      for (const file of cacheFiles) {
+        const filePath = path.join(dataDir, file);
+        let shouldRemove = false;
+        let reason = '';
+
+        try {
+          const stats = await fs.stat(filePath);
+          const fileAge = Date.now() - stats.mtime.getTime();
+          
+          // Check if file is too old
+          if (fileAge > maxAge) {
+            shouldRemove = true;
+            reason = `file_too_old (${Math.round(fileAge / (24 * 60 * 60 * 1000))} days)`;
+          }
+          
+          // Check if file is in problematic files list
+          if (problematicFiles.includes(file)) {
+            shouldRemove = true;
+            reason = reason ? `${reason}, problematic_file` : 'problematic_file';
+          }
+
+          if (shouldRemove) {
+            filesToRemove.push({
+              filename: file,
+              path: filePath,
+              size: stats.size,
+              age: Math.round(fileAge / (24 * 60 * 60 * 1000)),
+              reason: reason
+            });
+          }
+
+        } catch (error) {
+          this.log('WARN', `Could not evaluate cache file ${file}`, error.message);
+        }
+      }
+
+      this.log('INFO', `Identified ${filesToRemove.length} files for removal`, {
+        files: filesToRemove.map(f => ({ name: f.filename, reason: f.reason }))
+      });
+
+      // Create backups before removal
+      const backupResults = [];
+      if (filesToRemove.length > 0) {
+        const backupResult = await this.createCacheBackup(filesToRemove);
+        backupResults.push(backupResult);
+        
+        if (!backupResult.success) {
+          this.log('ERROR', 'Failed to create backup, aborting cleanup', backupResult.error);
+          return {
+            success: false,
+            error: 'Backup creation failed',
+            backupError: backupResult.error,
+            duration: Date.now() - startTime
+          };
+        }
+      }
+
+      // Remove the files
+      const removedFiles = [];
+      const removalErrors = [];
+      
+      for (const fileInfo of filesToRemove) {
+        try {
+          await fs.unlink(fileInfo.path);
+          removedFiles.push(fileInfo);
+          this.log('INFO', `Removed cache file: ${fileInfo.filename}`, {
+            reason: fileInfo.reason,
+            size: fileInfo.size,
+            age: `${fileInfo.age} days`
+          });
+        } catch (error) {
+          removalErrors.push({
+            filename: fileInfo.filename,
+            error: error.message
+          });
+          this.log('ERROR', `Failed to remove cache file: ${fileInfo.filename}`, error.message);
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      const result = {
+        success: removalErrors.length === 0,
+        duration,
+        totalFilesEvaluated: cacheFiles.length,
+        filesIdentifiedForRemoval: filesToRemove.length,
+        filesSuccessfullyRemoved: removedFiles.length,
+        removalErrors: removalErrors.length,
+        removedFiles: removedFiles.map(f => ({
+          filename: f.filename,
+          reason: f.reason,
+          size: f.size,
+          age: f.age
+        })),
+        backupCreated: backupResults.length > 0 && backupResults[0].success,
+        backupPath: backupResults.length > 0 ? backupResults[0].backupPath : null
+      };
+
+      if (removalErrors.length > 0) {
+        result.errors = removalErrors;
+      }
+
+      this.log('INFO', 'Cache cleanup operation completed', result);
+      
+      return result;
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.log('ERROR', 'Cache cleanup operation failed', {
+        error: error.message,
+        duration
+      });
+      
+      return {
+        success: false,
+        error: error.message,
+        duration
+      };
+    }
+  }
+
+  /**
+   * Create backup of cache files before removal
+   * @param {Array<Object>} filesToBackup - Array of file objects to backup
+   * @returns {Promise<Object>} Backup result
+   */
+  async createCacheBackup(filesToBackup) {
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupDir = 'data/backups';
+      const backupPath = path.join(backupDir, `cache-backup-${timestamp}`);
+      
+      // Create backup directory
+      await fs.mkdir(backupPath, { recursive: true });
+      
+      this.log('INFO', `Creating cache backup at ${backupPath}`, {
+        fileCount: filesToBackup.length
+      });
+
+      const backupResults = [];
+      
+      // Copy each file to backup directory
+      for (const fileInfo of filesToBackup) {
+        try {
+          const backupFilePath = path.join(backupPath, fileInfo.filename);
+          await fs.copyFile(fileInfo.path, backupFilePath);
+          
+          backupResults.push({
+            filename: fileInfo.filename,
+            success: true,
+            backupPath: backupFilePath
+          });
+          
+          this.log('INFO', `Backed up cache file: ${fileInfo.filename}`);
+          
+        } catch (error) {
+          backupResults.push({
+            filename: fileInfo.filename,
+            success: false,
+            error: error.message
+          });
+          
+          this.log('ERROR', `Failed to backup cache file: ${fileInfo.filename}`, error.message);
+        }
+      }
+
+      // Create backup manifest
+      const manifest = {
+        timestamp: new Date().toISOString(),
+        backupReason: 'cache_cleanup',
+        totalFiles: filesToBackup.length,
+        successfulBackups: backupResults.filter(r => r.success).length,
+        failedBackups: backupResults.filter(r => !r.success).length,
+        files: backupResults
+      };
+      
+      const manifestPath = path.join(backupPath, 'backup-manifest.json');
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+      
+      const allSuccessful = backupResults.every(r => r.success);
+      
+      this.log('INFO', `Cache backup ${allSuccessful ? 'completed successfully' : 'completed with errors'}`, {
+        backupPath,
+        successfulBackups: manifest.successfulBackups,
+        failedBackups: manifest.failedBackups
+      });
+
+      return {
+        success: allSuccessful,
+        backupPath,
+        manifestPath,
+        totalFiles: manifest.totalFiles,
+        successfulBackups: manifest.successfulBackups,
+        failedBackups: manifest.failedBackups,
+        results: backupResults
+      };
+
+    } catch (error) {
+      this.log('ERROR', 'Cache backup creation failed', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Check if a cache file is problematic based on known issues
+   * @param {string} filename - Cache filename to check
+   * @returns {boolean} True if file is known to be problematic
+   */
+  isProblematicFile(filename) {
+    // List of known problematic files that should be removed
+    const problematicFiles = [
+      '2025-08.json' // Known to contain incorrect data
+    ];
+    
+    return problematicFiles.includes(filename);
+  }
+
+  /**
    * Set a sample CSRF token for testing
    * @param {string} sampleToken - Sample CSRF token
    * @param {string} sampleSessionId - Optional sample session ID
