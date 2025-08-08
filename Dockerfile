@@ -38,9 +38,9 @@ RUN chmod +x /usr/local/bin/tunnel-start.sh
 
 # Create data directory with proper permissions
 RUN mkdir -p data && \
-    chown -R courtapp:nodejs data && \
-    chmod 775 data
-
+    chown -R root:root data && \
+    chmod 777 data
+    
 # Create tmp directory for supervisord with proper permissions
 RUN mkdir -p /tmp && \
     chmod 1777 /tmp
