@@ -11,13 +11,10 @@ services:
       - ./data:/app/data
       # Optional: Mount logs directory
       - ./logs:/app/logs
-    environment:
-      - NODE_ENV=production
-      - TZ=America/Phoenix # Arizona timezone (no DST)
-      # Cloudflared tunnel configuration (optional)
-      # Get your token from: https://dash.cloudflare.com -> Zero Trust -> Networks -> Tunnels
-      # - CLOUDFLARED_TOKEN=your_tunnel_token_here
-      # - CLOUDFLARED_TUNNEL_NAME=mesa-court-aggregator  # Optional: custom tunnel name
+    # Load environment variables from .env file
+    # Copy sample.env to .env and configure your settings
+    env_file:
+      - .env
     restart: unless-stopped
     healthcheck:
       test:

@@ -63,7 +63,7 @@ environment:
   - NODE_ENV=production
   - TZ=America/Phoenix
   # Uncomment and set your token
-  - CLOUDFLARED_TOKEN=eyJhIjoiYjJiZWVkZWRlZWRlMjM0MzE2Y2M1Y2U0ODU3MjA3ZDkiLCJ0IjoiOTM2M2M0ZDctMDIzNi00ZGZjLTllMjYtZDliYzI3ZmNiZDE3IiwicyI6IlptWm1PVFU0TUdZdFl6UmxOUzAwWWpGaUxUazNOamN0T1ROall6UmtZakkzTm1FeiJ9
+  - CLOUDFLARED_TOKEN=your_tunnel_token_here
   - CLOUDFLARED_TUNNEL_NAME=mesa-court-aggregator
 ```
 
