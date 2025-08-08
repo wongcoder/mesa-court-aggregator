@@ -1,0 +1,31 @@
+{
+  "name": "court-aggregator",
+  "version": "1.0.0",
+  "description": "Court availability aggregator with calendar interface",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "court",
+    "aggregator",
+    "calendar",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5",
+    "supertest": "^7.1.4"
+  }
+}
