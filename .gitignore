@@ -46,10 +46,13 @@ Thumbs.db
 *.swp
 *.swo
 
-# Test files
+# Test files and development artifacts
+tests/
 test-*
 *test.js
 !*.test.js
+*.html.bak
+*.json.bak
 
 # Temporary files
 tmp/

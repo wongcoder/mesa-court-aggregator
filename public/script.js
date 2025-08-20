@@ -7,6 +7,9 @@ class CalendarApp {
         this.currentYear = this.currentDate.getFullYear();
         this.today = new Date();
 
+        // Initialize court utilization calculator
+        this.utilizationCalculator = new CourtUtilizationCalculator();
+
         this.monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
@@ -474,10 +477,25 @@ class CalendarApp {
         const parkShortName = this.getShortParkName(park.name);
         const shortTimeLabel = this.getShortTimeLabel(timeBlock.timeLabel);
 
-        block.innerHTML = `<div class="park-name">${parkShortName}</div><div class="time-label">${shortTimeLabel}</div>`;
+        // Create content with enhanced utilization display
+        let blockContent = `<div class="park-name">${parkShortName}</div><div class="time-label">${shortTimeLabel}</div>`;
+        
+        // Calculate utilization with view-specific formatting
+        if (timeBlock.courts) {
+            const utilization = this.utilizationCalculator.calculateUtilization(park, timeBlock, 'weekly');
+            blockContent += `<div class="${utilization.cssClasses}">${utilization.displayText}</div>`;
+        } else if (timeBlock.utilizationText) {
+            // Fallback for existing data format
+            blockContent += `<div class="court-utilization court-utilization--weekly">${timeBlock.utilizationText}</div>`;
+        }
+        
+        block.innerHTML = blockContent;
 
-        // Enhanced tooltip with court information (same as monthly view)
+        // Enhanced tooltip with court information and utilization
         let tooltipText = `${park.name}: ${timeBlock.timeLabel}`;
+        if (timeBlock.utilizationText) {
+            tooltipText += `\n${timeBlock.utilizationText} courts booked`;
+        }
         if (timeBlock.courts && timeBlock.courts.length > 0) {
             const courtList = timeBlock.courts.join(', ');
             tooltipText += `\nCourts: ${courtList}`;
@@ -613,8 +631,26 @@ class CalendarApp {
         block.appendChild(parkLabel);
         block.appendChild(timeLabel);
 
-        // Enhanced tooltip with court information (same as monthly view)
+        // Add enhanced court utilization display
+        if (timeBlock.courts) {
+            const utilization = this.utilizationCalculator.calculateUtilization(park, timeBlock, 'daily');
+            const utilizationLabel = document.createElement('div');
+            utilizationLabel.className = utilization.cssClasses;
+            utilizationLabel.textContent = utilization.displayText;
+            block.appendChild(utilizationLabel);
+        } else if (timeBlock.utilizationText) {
+            // Fallback for existing data format
+            const utilizationLabel = document.createElement('div');
+            utilizationLabel.className = 'court-utilization court-utilization--daily';
+            utilizationLabel.textContent = timeBlock.utilizationText;
+            block.appendChild(utilizationLabel);
+        }
+
+        // Enhanced tooltip with court information and utilization
         let tooltipText = `${park.name}: ${timeBlock.timeLabel}`;
+        if (timeBlock.utilizationText) {
+            tooltipText += `\n${timeBlock.utilizationText} courts booked`;
+        }
         if (timeBlock.courts && timeBlock.courts.length > 0) {
             const courtList = timeBlock.courts.join(', ');
             tooltipText += `\nCourts: ${courtList}`;
@@ -1254,8 +1290,26 @@ class CalendarApp {
             timeLabel.textContent = block.timeLabel;
             timeBlock.appendChild(timeLabel);
 
+            // Add enhanced court utilization display
+            if (block.courts) {
+                const utilization = this.utilizationCalculator.calculateUtilization(park, block, 'monthly');
+                const utilizationLabel = document.createElement('span');
+                utilizationLabel.className = utilization.cssClasses;
+                utilizationLabel.textContent = utilization.displayText;
+                timeBlock.appendChild(utilizationLabel);
+            } else if (block.utilizationText) {
+                // Fallback for existing data format
+                const utilizationLabel = document.createElement('span');
+                utilizationLabel.className = 'court-utilization court-utilization--monthly';
+                utilizationLabel.textContent = block.utilizationText;
+                timeBlock.appendChild(utilizationLabel);
+            }
+
             // Enhanced tooltip with court information
             let tooltipText = `${park.name}: ${block.timeLabel}`;
+            if (block.utilizationText) {
+                tooltipText += `\n${block.utilizationText} courts booked`;
+            }
             if (block.courts && block.courts.length > 0) {
                 const courtList = block.courts.join(', ');
                 tooltipText += `\nCourts: ${courtList}`;
@@ -1281,7 +1335,7 @@ class CalendarApp {
 
     /**
      * Parse booking details to extract time periods
-     * Enhanced to handle detailed court booking information
+     * Enhanced to handle detailed court booking information with utilization data
      */
     parseBookingDetails(park) {
         const timeBlocks = [];
@@ -1289,31 +1343,59 @@ class CalendarApp {
         // Use the new timeWindows array structure
         if (park.timeWindows && park.timeWindows.length > 0) {
             park.timeWindows.forEach(window => {
+                // Use backend-provided utilization data if available, otherwise calculate
+                let utilization, utilizationText;
+                
+                if (window.utilizationText && window.utilizationPercentage !== undefined) {
+                    // Use backend-provided utilization data
+                    utilization = {
+                        bookedCount: window.bookedCourtCount || (window.courts ? window.courts.length : 0),
+                        totalCount: window.totalCourts || park.totalCourts || 0,
+                        displayText: window.utilizationText,
+                        utilizationPercentage: window.utilizationPercentage,
+                        isEmpty: window.bookedCourtCount === 0,
+                        isFull: window.isFullyBooked || false
+                    };
+                    utilizationText = window.utilizationText;
+                } else {
+                    // Fallback to frontend calculation
+                    utilization = this.utilizationCalculator.calculateUtilization(park, window);
+                    utilizationText = utilization.displayText;
+                }
+                
                 timeBlocks.push({
                     timeLabel: window.displayTime,
                     startTime: window.startTime,
                     endTime: window.endTime,
                     courts: window.courts,
-                    courtCount: window.courts ? window.courts.length : 0
+                    courtCount: window.courts ? window.courts.length : 0,
+                    utilization: utilization,
+                    utilizationText: utilizationText
                 });
             });
         } else if (park.status === 'booked') {
             // Handle fully booked parks without specific time windows
+            const utilization = this.utilizationCalculator.calculateParkUtilization(park);
             timeBlocks.push({
                 timeLabel: 'Fully Booked',
                 startTime: null,
                 endTime: null,
                 courts: ['All courts'],
-                courtCount: park.totalCourts || 0
+                courtCount: park.totalCourts || 0,
+                utilization: utilization,
+                utilizationText: utilization.displayText
             });
         } else if (park.status === 'partial' && (!park.timeWindows || park.timeWindows.length === 0)) {
             // Handle partially booked parks without specific time windows
+            const utilization = this.utilizationCalculator.calculateParkUtilization(park);
             timeBlocks.push({
                 timeLabel: 'Partially Booked',
                 startTime: null,
                 endTime: null,
                 courts: [],
-                courtCount: park.bookedCourts || 0
+                courtCount: park.bookedCourts || 0,
+                utilization: utilization,
+                utilizationText: utilization.displayText
             });
         }
 

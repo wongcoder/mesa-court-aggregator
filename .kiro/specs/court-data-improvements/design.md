@@ -2,15 +2,15 @@
 
 ## Overview
 
-Based on the investigation of Christopher J. Brady court data for 2025-08-09, the current system appears to be processing data correctly. The user's concern about overlapping bookings (9:00-1:30 PM and 9:30-10:00) may have been from a different date or a temporary API inconsistency. However, there are legitimate improvements needed for court utilization display and time window overflow handling.
+This design addresses comprehensive user experience improvements for the Court Aggregator application based on customer feedback and usability testing. The focus is on creating a more intuitive, mobile-friendly interface with accurate data display and improved navigation.
 
 The design addresses six main areas:
-1. **Enhanced Court Utilization Display**: Show "X/Y courts booked" ratios in weekly and daily views
-2. **Time Window Parsing Corrections**: Fix issues with time window display and parsing in the frontend
-3. **Data Validation Improvements**: Add better validation and logging for booking period inconsistencies
-4. **Cache Management Cleanup**: Implement proper cleanup of outdated cache files
-5. **API Edge Case Detection**: Detect and handle the midnight API refresh issue
-6. **Daily Granular Cache System**: Refactor from monthly to daily cache files with optimized scheduling
+1. **Court Utilization Display**: Clear "X/Y courts booked" ratios for quick availability assessment
+2. **User Interface Improvements**: Better click targets, mobile responsiveness, and visual clarity
+3. **Navigation Enhancements**: Accurate date selection, "Today" button, and current day highlighting
+4. **Data Accuracy Fixes**: Resolve weekly view inconsistencies and date navigation issues
+5. **Mobile Experience**: Responsive design with mobile-optimized defaults and layouts
+6. **Backend Improvements**: Cache cleanup, data validation, and performance optimization
 
 ## Architecture
 
@@ -21,280 +21,469 @@ Mesa API → CourtDataProcessor → CacheManager → Frontend Display
 
 ### Enhanced Data Flow
 ```
-Mesa API → CourtDataProcessor (with validation) → CacheManager → Frontend (with utilization display)
+Mesa API → CourtDataProcessor (with validation) → CacheManager → Enhanced Frontend
+                                                                      ↓
+                                                    Mobile Detection → Responsive UI
+                                                                      ↓
+                                                    Utilization Display + Navigation
+```
+
+### Mobile-First Responsive Architecture
+```
+Device Detection → View Selection (Daily/Weekly/Monthly) → Responsive Layout → Touch-Optimized UI
 ```
 
 ## Components and Interfaces
 
-### 1. Enhanced Court Data Processing
+### 1. Court Utilization Display System
 
-#### CourtDataProcessor Enhancements
+#### Court Utilization Calculator
 ```javascript
-class CourtDataProcessor {
-  // New method to calculate court utilization for time windows
-  calculateCourtUtilization(parkData, timeWindow) {
-    const totalCourts = parkData.totalCourts;
-    const bookedCourts = timeWindow.courts.length;
+class CourtUtilizationCalculator {
+  // Calculate court utilization for display with view-specific formatting
+  calculateUtilization(parkData, timeWindow, viewType = 'weekly') {
+    const totalCourts = this.getTotalCourtsForPark(parkData);
+    const bookedCourts = timeWindow.courts ? timeWindow.courts.length : 0;
+    
     return {
       bookedCount: bookedCourts,
       totalCount: totalCourts,
-      utilizationRatio: `${bookedCourts}/${totalCourts}`,
-      utilizationPercentage: Math.round((bookedCourts / totalCourts) * 100)
+      displayText: this.formatForView(bookedCourts, totalCourts, viewType),
+      utilizationPercentage: totalCourts > 0 ? Math.round((bookedCourts / totalCourts) * 100) : 0,
+      isEmpty: bookedCourts === 0,
+      isFull: bookedCourts === totalCourts,
+      viewOptimized: true
     };
   }
 
+  // Optimize display format based on available space
+  formatForView(bookedCourts, totalCourts, viewType) {
+    if (viewType === 'weekly') {
+      // Ultra-compact format for ~100px width constraint
+      return `${bookedCourts}/${totalCourts}`;
+    } else if (viewType === 'daily') {
+      // Enhanced format with more available width
+      return `${bookedCourts}/${totalCourts} courts`;
+    }
+    return `${bookedCourts}/${totalCourts}`;
+  }
+
   // Enhanced time window generation with utilization data
-  generateTimeWindows(parkData) {
-    const timeWindows = this.generateTimeWindowsBase(parkData);
+  enhanceTimeWindowsWithUtilization(parkData, viewType = 'weekly') {
+    const timeWindows = parkData.timeWindows || [];
     
     return timeWindows.map(window => ({
       ...window,
-      utilization: this.calculateCourtUtilization(parkData, window),
-      isExtendedHours: this.isExtendedHours(window.startTime, window.endTime)
+      utilization: this.calculateUtilization(parkData, window, viewType),
+      displayLabel: this.createDisplayLabel(window, parkData, viewType)
     }));
   }
 
-  // Validate booking periods for overlaps and inconsistencies
-  validateBookingPeriods(court) {
-    const periods = court.bookingPeriods;
-    const warnings = [];
+  createDisplayLabel(timeWindow, parkData) {
+    const utilization = this.calculateUtilization(parkData, timeWindow);
+    const timeLabel = this.formatTimeRange(timeWindow.startTime, timeWindow.endTime);
     
-    for (let i = 0; i < periods.length - 1; i++) {
-      const current = periods[i];
-      const next = periods[i + 1];
-      
-      if (this.parseTimeToMinutes(current.endTime) > this.parseTimeToMinutes(next.startTime)) {
-        warnings.push(`Overlapping booking periods: ${current.startTime}-${current.endTime} and ${next.startTime}-${next.endTime}`);
+    return {
+      parkName: this.getShortParkName(parkData.name),
+      timeRange: timeLabel,
+      utilization: utilization.displayText,
+      fullText: `${utilization.displayText} courts booked`
+    };
+  }
+}
+```
+
+### 2. Enhanced User Interface Components
+
+#### Improved Filter Button Interface
+```javascript
+class FilterButtonManager {
+  createFilterButton(filterOption) {
+    const button = document.createElement('button');
+    button.className = 'filter-button';
+    button.setAttribute('role', 'checkbox');
+    button.setAttribute('aria-checked', filterOption.checked);
+    
+    // Make entire button clickable, not just checkbox
+    button.innerHTML = `
+      <span class="filter-checkbox" aria-hidden="true">
+        <span class="checkmark ${filterOption.checked ? 'checked' : ''}"></span>
+      </span>
+      <span class="filter-label">${filterOption.label}</span>
+    `;
+    
+    // Enhanced click handling for entire button surface
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.toggleFilter(filterOption.id);
+      this.updateButtonState(button, !filterOption.checked);
+    });
+    
+    // Keyboard accessibility
+    button.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        button.click();
       }
-    }
+    });
     
-    return warnings;
+    return button;
+  }
+  
+  updateButtonState(button, checked) {
+    button.setAttribute('aria-checked', checked);
+    const checkmark = button.querySelector('.checkmark');
+    checkmark.classList.toggle('checked', checked);
   }
 }
 ```
 
-### 2. Frontend Display Enhancements
-
-#### Weekly View Court Utilization
+#### Enhanced Navigation System
 ```javascript
-createWeeklyBookingBlock(park, timeBlock, parkIndex, totalParks) {
-  const block = document.createElement('div');
-  block.className = 'weekly-booking-block';
+class NavigationManager {
+  constructor() {
+    this.currentDate = new Date();
+    this.currentView = this.detectDefaultView();
+  }
   
-  // Enhanced content with court utilization
-  const parkShortName = this.getShortParkName(park.name);
-  const utilizationText = timeBlock.utilization ? 
-    `${timeBlock.utilization.utilizationRatio}` : '';
+  // Detect device type and set appropriate default view
+  detectDefaultView() {
+    const isMobile = window.innerWidth <= 768 || 
+                    /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isMobile ? 'daily' : 'weekly';
+  }
   
-  block.innerHTML = `
-    <div class="park-name">${parkShortName}</div>
-    <div class="court-utilization">${utilizationText}</div>
-    <div class="time-label">${this.getShortTimeLabel(timeBlock.timeLabel)}</div>
-  `;
+  // Create "Today" button for quick navigation
+  createTodayButton() {
+    const todayButton = document.createElement('button');
+    todayButton.className = 'today-button';
+    todayButton.textContent = 'Today';
+    todayButton.setAttribute('aria-label', 'Go to today\'s date');
+    
+    todayButton.addEventListener('click', () => {
+      this.navigateToToday();
+    });
+    
+    return todayButton;
+  }
   
-  // ... rest of positioning logic
+  navigateToToday() {
+    const today = new Date();
+    this.currentDate = today;
+    this.updateCalendarView(today);
+    this.highlightCurrentDay();
+  }
+  
+  // Fix month view date selection (off by one day issue)
+  handleMonthViewClick(clickedDate) {
+    // Ensure we're using the correct date without timezone offset issues
+    const correctedDate = new Date(clickedDate.getFullYear(), clickedDate.getMonth(), clickedDate.getDate());
+    this.navigateToDate(correctedDate);
+  }
+  
+  // Highlight current day in weekly view
+  highlightCurrentDay() {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
+    // Remove existing highlights
+    document.querySelectorAll('.current-day').forEach(el => {
+      el.classList.remove('current-day');
+    });
+    
+    // Add highlight to current day
+    const todayElement = document.querySelector(`[data-date="${todayString}"]`);
+    if (todayElement) {
+      todayElement.classList.add('current-day');
+    }
+  }
 }
 ```
 
-#### Responsive Layout Improvements
-```javascript
-// Enhanced booking block creation with flexible layout
-createWeeklyBookingBlock(park, timeBlock, parkIndex, totalParks) {
-  const block = document.createElement('div');
-  block.className = 'weekly-booking-block';
-  block.style.backgroundColor = this.getAccessibleParkColor(park.name);
-
-  // Create flexible content structure
-  const contentContainer = document.createElement('div');
-  contentContainer.className = 'booking-content';
-  
-  const parkNameDiv = document.createElement('div');
-  parkNameDiv.className = 'park-name';
-  parkNameDiv.textContent = this.getShortParkName(park.name);
-  
-  const utilizationDiv = document.createElement('div');
-  utilizationDiv.className = 'court-utilization';
-  utilizationDiv.textContent = timeBlock.utilization ? 
-    timeBlock.utilization.utilizationRatio : '';
-  
-  const timeDiv = document.createElement('div');
-  timeDiv.className = 'time-range';
-  timeDiv.textContent = this.formatTimeForDisplay(timeBlock.timeLabel);
-  
-  contentContainer.appendChild(parkNameDiv);
-  if (utilizationDiv.textContent) {
-    contentContainer.appendChild(utilizationDiv);
-  }
-  contentContainer.appendChild(timeDiv);
-  
-  block.appendChild(contentContainer);
-  
-  // Enhanced positioning with flexible layout
-  this.positionBookingBlock(block, parkIndex, totalParks, timeBlock);
-  
-  return block;
-}
-
-// Improved time formatting to prevent truncation
-formatTimeForDisplay(timeLabel) {
-  // Convert long time ranges to more compact but readable format
-  if (timeLabel.includes('-')) {
-    const [start, end] = timeLabel.split('-');
-    const shortStart = this.formatTimeShort(start.trim());
-    const shortEnd = this.formatTimeShort(end.trim());
-    return `${shortStart}-${shortEnd}`;
-  }
-  return timeLabel;
-}
-
-formatTimeShort(time) {
-  // Convert "9:00 AM" to "9a", "1:30 PM" to "1:30p"
-  return time.replace(':00 ', '').replace(' AM', 'a').replace(' PM', 'p');
-}
-```
-
-#### CSS Layout Improvements
+#### Mobile-Responsive CSS Framework
 ```css
-/* Enhanced booking block layout */
-.weekly-booking-block {
-  position: absolute;
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-on-primary);
+/* Enhanced filter button styling */
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--background-color);
   cursor: pointer;
-  transition: opacity 0.2s ease;
-  box-shadow: var(--shadow-light);
-  z-index: 1;
+  transition: all 0.2s ease;
+  min-height: 44px; /* Touch-friendly minimum */
   
-  /* Use flexbox instead of fixed positioning */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  
-  /* Remove text truncation */
-  overflow: visible;
-  white-space: normal;
-  word-wrap: break-word;
-  hyphens: auto;
-  line-height: 1.1;
-}
-
-.booking-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  /* Ensure entire button is clickable */
   width: 100%;
-  height: 100%;
-  gap: 1px;
+  text-align: left;
 }
 
-.weekly-booking-block .park-name {
+.filter-button:hover {
+  background: var(--hover-background);
+  border-color: var(--primary-color);
+  /* Enhanced visual feedback with emojis instead of accessibility hints */
+}
+
+.filter-button:hover .filter-label::after {
+  content: ' 🎯';
+  opacity: 0.7;
+}
+
+/* Remove conflicting accessibility hints that overlap with tooltips */
+.filter-button[aria-describedby] {
+  /* Override any accessibility hint positioning that causes overlap */
+}
+
+.filter-button:focus {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+}
+
+.filter-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkmark.checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.checkmark.checked::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Current day highlighting */
+.current-day {
+  background: var(--current-day-background) !important;
+  border: 2px solid var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+}
+
+.current-day .day-header {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+/* Today button styling */
+.today-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  min-height: 44px;
+}
+
+.today-button:hover {
+  background: var(--primary-color-dark);
+}
+
+.today-button:focus {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+}
+
+/* View-specific optimizations for space constraints */
+.weekly-view .court-utilization {
+  /* Ultra-compact format for ~100px width constraint */
+  font-size: 11px;
   font-weight: 600;
-  font-size: 9px;
-  line-height: 1;
-  color: var(--text-on-primary);
-  text-align: center;
-}
-
-.weekly-booking-block .court-utilization {
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--text-on-primary);
-  background: rgba(0, 0, 0, 0.2);
+  line-height: 1.2;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
   border-radius: 2px;
-  padding: 0 2px;
-  line-height: 1;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  min-width: 28px;
+  text-align: center;
+  display: inline-block;
 }
 
-.weekly-booking-block .time-range {
-  font-size: 8px;
-  line-height: 1;
-  color: var(--text-on-primary);
-  text-align: center;
+.daily-view .court-utilization {
+  /* Enhanced format with more available width */
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 4px;
+  margin: 2px 0;
+  display: inline-block;
+}
+
+.daily-view .court-utilization::after {
+  content: ' courts';
+  font-size: 11px;
   opacity: 0.9;
 }
 
-/* Responsive adjustments for smaller blocks */
-.weekly-booking-block.compact {
-  padding: 1px 2px;
+/* Optimize weekly booking blocks for readability */
+.weekly-booking-block {
+  position: relative;
+  min-height: 28px;
+  padding: 2px 4px;
+  font-size: 10px;
+  line-height: 1.3;
+  overflow: hidden;
 }
 
-.weekly-booking-block.compact .park-name {
-  font-size: 8px;
+.weekly-booking-block .court-utilization {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
 }
 
-.weekly-booking-block.compact .court-utilization {
-  font-size: 7px;
+/* Daily view has more space for enhanced presentation */
+.daily-booking-block {
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
-.weekly-booking-block.compact .time-range {
-  font-size: 7px;
+.daily-booking-block .court-utilization {
+  float: right;
+  margin-left: 8px;
+}
+
+/* Mobile-responsive layout */
+@media (max-width: 768px) {
+  .calendar-container {
+    padding: 8px;
+  }
+  
+  .filter-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .filter-button {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .navigation-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .today-button {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+  
+  /* Enhanced booking blocks for mobile */
+  .weekly-booking-block {
+    min-height: 32px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  
+  .court-utilization {
+    font-size: 10px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .filter-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
 }
 ```
 
-### 3. Cache Management and Cleanup
+### 3. Data Accuracy and Validation System
 
-#### BackfillService Cache Cleanup
+#### Weekly View Data Consistency Validator
 ```javascript
-class BackfillService {
-  async cleanupOutdatedCacheFiles() {
-    const fs = require('fs').promises;
-    const path = require('path');
+class WeeklyViewValidator {
+  validateWeeklyData(weeklyData, sourceData) {
+    const validationResults = {
+      isConsistent: true,
+      discrepancies: [],
+      warnings: []
+    };
     
-    try {
-      const dataDir = 'data';
-      const files = await fs.readdir(dataDir);
-      const cacheFiles = files.filter(file => file.endsWith('.json') && file !== '.gitkeep');
+    // Compare weekly view data against source data
+    for (const [date, dayData] of Object.entries(weeklyData)) {
+      const sourceDay = sourceData[date];
       
-      const filesToRemove = [];
+      if (!sourceDay) {
+        validationResults.warnings.push(`Missing source data for ${date}`);
+        continue;
+      }
       
-      for (const file of cacheFiles) {
-        const filePath = path.join(dataDir, file);
-        const stats = await fs.stat(filePath);
-        const fileAge = Date.now() - stats.mtime.getTime();
-        const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-        
-        // Remove files that are too old or known to be problematic
-        if (fileAge > maxAge || this.isProblematicFile(file)) {
-          filesToRemove.push(file);
+      // Validate Christopher J. Brady data specifically
+      const bradyWeekly = dayData.parks?.find(p => p.name.includes('Brady'));
+      const bradySource = sourceDay.parks?.find(p => p.name.includes('Brady'));
+      
+      if (bradyWeekly && bradySource) {
+        const discrepancy = this.compareBradyData(bradyWeekly, bradySource, date);
+        if (discrepancy) {
+          validationResults.discrepancies.push(discrepancy);
+          validationResults.isConsistent = false;
         }
       }
-      
-      // Create backup before removal
-      if (filesToRemove.length > 0) {
-        await this.createCacheBackup(filesToRemove);
-      }
-      
-      // Remove outdated files
-      for (const file of filesToRemove) {
-        const filePath = path.join(dataDir, file);
-        await fs.unlink(filePath);
-        this.log('INFO', `Removed outdated cache file: ${file}`);
-      }
-      
-      return {
-        success: true,
-        removedFiles: filesToRemove,
-        message: `Cleaned up ${filesToRemove.length} cache files`
-      };
-      
-    } catch (error) {
-      this.log('ERROR', 'Cache cleanup failed', error);
-      return {
-        success: false,
-        error: error.message
-      };
     }
+    
+    return validationResults;
   }
   
-  isProblematicFile(filename) {
-    // List of known problematic files
-    const problematicFiles = ['2025-08.json'];
-    return problematicFiles.includes(filename);
+  compareBradyData(weeklyData, sourceData, date) {
+    // Compare time windows and court counts
+    const weeklyWindows = weeklyData.timeWindows || [];
+    const sourceWindows = sourceData.timeWindows || [];
+    
+    if (weeklyWindows.length !== sourceWindows.length) {
+      return {
+        type: 'time_window_count_mismatch',
+        date,
+        weeklyCount: weeklyWindows.length,
+        sourceCount: sourceWindows.length,
+        message: `Brady data: Weekly view shows ${weeklyWindows.length} time windows, source has ${sourceWindows.length}`
+      };
+    }
+    
+    // Check for booking overlaps or inconsistencies
+    for (let i = 0; i < weeklyWindows.length; i++) {
+      const weeklyWindow = weeklyWindows[i];
+      const sourceWindow = sourceWindows[i];
+      
+      if (weeklyWindow.courts?.length !== sourceWindow.courts?.length) {
+        return {
+          type: 'court_count_mismatch',
+          date,
+          timeWindow: weeklyWindow.timeLabel,
+          weeklyCount: weeklyWindow.courts?.length || 0,
+          sourceCount: sourceWindow.courts?.length || 0,
+          message: `Brady data mismatch at ${weeklyWindow.timeLabel}: Weekly shows ${weeklyWindow.courts?.length || 0} courts, source shows ${sourceWindow.courts?.length || 0}`
+        };
+      }
+    }
+    
+    return null; // No discrepancy found
   }
 }
 ```

@@ -2,59 +2,89 @@
 
 ## Introduction
 
-The Court Aggregator application has several data accuracy and display issues that need to be addressed:
+The Court Aggregator application requires comprehensive user experience improvements based on customer feedback and testing. The current system has several usability issues that impact user satisfaction and functionality:
 
-1. **Data Accuracy Issue**: Christopher J. Brady (Monterey Park) court data appears incorrect - the API shows overlapping bookings (9:00-1:30 PM and 9:30-10:00 AM) which suggests a data processing error
-2. **Court Count Display**: Users want to see at-a-glance court utilization information (e.g., "3/4 courts booked") in the weekly and daily views
-3. **Time Window Overflow**: The current time window display overflows beyond the calendar grid, making it difficult to read
+1. **Court Utilization Display**: Users need clear, at-a-glance court booking information showing ratios like "3/4 courts booked" per time window
+2. **User Interface Issues**: Filter buttons have poor click targets, requiring users to click precisely on checkboxes rather than the full button surface
+3. **Data Accuracy Problems**: Weekly view shows inconsistent data compared to test data, particularly for Christopher J. Brady court on 08-08
+4. **Navigation Issues**: Month view date selection is off by one day, and there's no quick way to return to today's date
+5. **Mobile Experience**: The interface doesn't work properly on mobile devices, doesn't fit screens, and lacks mobile-optimized navigation
+6. **Visual Clarity**: Weekly view lacks current day highlighting and visual cues similar to standard calendar applications
+7. **Cache Management**: System needs proper cleanup of outdated cache files to prevent data inconsistencies
+8. **Data Validation**: System requires better detection and handling of API edge cases and data inconsistencies
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a user viewing court data, I want accurate booking information that correctly reflects the actual court reservations from the Mesa API, so that I can make informed decisions about court availability.
+**User Story:** As a user viewing court availability, I want to see clear court utilization ratios (e.g., "3/4 courts booked") for each time window with excellent readability despite space constraints, so that I can quickly assess availability without examining individual court details.
 
 #### Acceptance Criteria
 
-1. WHEN the system processes API data THEN it SHALL correctly handle overlapping time slots and booking periods
-2. WHEN there are data inconsistencies in the API response THEN the system SHALL log warnings and apply data validation rules
-3. WHEN booking periods are calculated THEN the system SHALL ensure no impossible overlaps (e.g., 9:00-1:30 PM and 9:30-10:00 AM)
-4. WHEN court data is processed THEN the system SHALL validate time formats and booking logic before storing
+1. WHEN viewing any calendar view THEN the system SHALL display court utilization as "X/Y courts booked" format for each time window
+2. WHEN multiple courts are booked during the same time period THEN the system SHALL show the count of booked courts vs total available courts
+3. WHEN court utilization changes during a time window THEN the system SHALL display the peak utilization for that period
+4. WHEN no courts are booked THEN the system SHALL show "0/Y courts booked" or indicate availability clearly
+5. WHEN viewing weekly calendar with limited horizontal space (~100px) THEN the system SHALL optimize text size and layout for maximum readability
+6. WHEN viewing daily calendar with more available width THEN the system SHALL use the additional space to enhance readability and visual presentation
 
 ### Requirement 2
 
-**User Story:** As a user viewing the weekly or daily calendar, I want to see court utilization ratios (e.g., "3/4 courts booked") for each park during specific time windows, so that I can quickly assess availability without examining individual court details.
+**User Story:** As a user interacting with filter controls, I want to be able to click anywhere on the filter button surface with enhanced visual feedback, so that I don't have to precisely target small checkboxes and can enjoy improved hover interactions.
 
 #### Acceptance Criteria
 
-1. WHEN viewing weekly calendar THEN the system SHALL display court utilization ratios for each park's booking blocks
-2. WHEN viewing daily calendar THEN the system SHALL display court utilization ratios for each park's booking blocks
-3. WHEN multiple courts are booked during the same time period THEN the system SHALL show the count of booked courts vs total courts
-4. WHEN court utilization changes during a time window THEN the system SHALL display the peak utilization for that period
+1. WHEN clicking on filter buttons THEN the system SHALL respond to clicks on the entire button surface, not just the checkbox
+2. WHEN hovering over filter buttons THEN the system SHALL provide enhanced visual feedback using emojis or other visual elements instead of overlapping accessibility hints
+3. WHEN filter buttons are focused THEN the system SHALL show clear focus indicators without interfering with other UI elements
+4. WHEN using keyboard navigation THEN filter buttons SHALL be fully accessible via keyboard controls
+5. WHEN accessibility hints would overlap with tooltips THEN the system SHALL remove conflicting accessibility hints to prevent UI interference
 
 ### Requirement 3
 
-**User Story:** As a user viewing court booking details, I want time labels to display fully readable text instead of being truncated to "09...", so that I can clearly see the complete time windows for court bookings.
+**User Story:** As a user viewing the weekly calendar, I want accurate data display that matches the actual court bookings, so that I can trust the information shown.
 
 #### Acceptance Criteria
 
-1. WHEN time labels are displayed in booking blocks THEN the system SHALL show complete time ranges without text truncation
-2. WHEN booking blocks are too small for full text THEN the system SHALL use responsive layout techniques instead of ellipsis truncation
-3. WHEN multiple time windows exist THEN the system SHALL use flexible layout (flexbox/grid) instead of fixed positioning
-4. WHEN text doesn't fit in the allocated space THEN the system SHALL wrap text or adjust layout rather than truncate with "..."
+1. WHEN viewing weekly data THEN the system SHALL display consistent information that matches the source data files
+2. WHEN comparing weekly view to raw data THEN time windows and bookings SHALL align correctly
+3. WHEN data discrepancies are detected THEN the system SHALL log warnings and use the most reliable data source
+4. WHEN displaying Christopher J. Brady court data THEN the system SHALL show accurate booking information without overlaps or errors
 
 ### Requirement 4
 
-**User Story:** As a user, I want improved visual clarity in the court booking display, so that I can easily distinguish between different levels of court utilization and booking patterns.
+**User Story:** As a user navigating the calendar, I want accurate date selection and a quick way to return to today's date, so that I can efficiently browse court availability.
 
 #### Acceptance Criteria
 
-1. WHEN displaying court utilization THEN the system SHALL use clear, readable formatting (e.g., "3/4" not "3 of 4 courts")
-2. WHEN showing booking blocks THEN the system SHALL ensure text remains readable within the allocated space
-3. WHEN multiple parks have bookings THEN the system SHALL maintain visual separation and clarity
-4. WHEN court counts are displayed THEN the system SHALL use consistent formatting across all views
+1. WHEN clicking on colored blocks in month view THEN the system SHALL navigate to the correct date, not the day before
+2. WHEN viewing any calendar view THEN the system SHALL provide a "Today" button to quickly return to the current date
+3. WHEN the "Today" button is clicked THEN the system SHALL navigate to today's date and highlight it appropriately
+4. WHEN navigating between dates THEN the system SHALL maintain accurate date context and selection
 
 ### Requirement 5
+
+**User Story:** As a user viewing the weekly calendar, I want clear visual indication of the current day, so that I can easily orient myself in time like in standard calendar applications.
+
+#### Acceptance Criteria
+
+1. WHEN viewing weekly calendar THEN the system SHALL highlight the current day with distinct visual styling
+2. WHEN the current day is visible THEN it SHALL be clearly distinguishable from other days using color, border, or background
+3. WHEN today's date changes THEN the system SHALL automatically update the current day highlighting
+4. WHEN viewing past or future weeks THEN the current day highlighting SHALL only appear when today is visible in the view
+
+### Requirement 6
+
+**User Story:** As a mobile user, I want a responsive interface that works properly on my device and defaults to an appropriate view, so that I can easily access court information on the go.
+
+#### Acceptance Criteria
+
+1. WHEN accessing the application on mobile devices THEN the system SHALL default to daily view for optimal mobile experience
+2. WHEN viewing on mobile THEN the interface SHALL fit properly within the screen boundaries without horizontal scrolling
+3. WHEN interacting on mobile THEN touch targets SHALL be appropriately sized for finger navigation
+4. WHEN switching between views on mobile THEN the system SHALL maintain mobile-optimized layouts and navigation
+
+### Requirement 7
 
 **User Story:** As a system administrator, I want the cache management system to properly clean up outdated cache files, so that the system doesn't accumulate stale data and maintains optimal performance.
 
@@ -65,35 +95,24 @@ The Court Aggregator application has several data accuracy and display issues th
 3. WHEN cache files are removed THEN the system SHALL ensure no active processes are using the files
 4. WHEN new data is cached THEN the system SHALL verify the data integrity before replacing existing cache files
 
-### Requirement 6
-
-**User Story:** As a user, I want the system to detect and handle the API edge case where all courts appear unavailable after midnight, so that I receive accurate court availability information.
-
-#### Acceptance Criteria
-
-1. WHEN all courts for all parks show as fully booked for an entire day THEN the system SHALL detect this as a potential API edge case
-2. WHEN the API edge case is detected THEN the system SHALL log a warning and mark the data as potentially invalid
-3. WHEN invalid data is detected THEN the system SHALL attempt to use cached data from the previous successful fetch
-4. WHEN displaying potentially invalid data THEN the system SHALL show a warning message to users
-
-### Requirement 7
-
-**User Story:** As a system administrator, I want the data collection schedule optimized to avoid API edge cases, so that the system collects accurate data consistently.
-
-#### Acceptance Criteria
-
-1. WHEN scheduling data collection THEN the system SHALL fetch data at 11:00 PM for the next day's availability
-2. WHEN collecting data for date X THEN the system SHALL fetch it on date X-1 at 11:00 PM
-3. WHEN the scheduled collection runs THEN the system SHALL store data in daily cache files rather than monthly files
-4. WHEN storing daily cache files THEN the system SHALL organize them in a dedicated cache directory structure
-
 ### Requirement 8
 
-**User Story:** As a developer, I want the cache system refactored to use daily granular storage, so that data management is more efficient and easier to maintain.
+**User Story:** As a user, I want the system to detect and handle data inconsistencies and API edge cases, so that I receive accurate and reliable court availability information.
 
 #### Acceptance Criteria
 
-1. WHEN caching court data THEN the system SHALL store each day's data in a separate JSON file (e.g., 2025-08-09.json)
-2. WHEN organizing cache files THEN the system SHALL store them in a structured directory (e.g., cache/2025/08/09.json)
-3. WHEN accessing cached data THEN the system SHALL efficiently locate and load daily cache files
-4. WHEN cleaning up cache THEN the system SHALL easily identify and remove outdated daily files
+1. WHEN data inconsistencies are detected (like overlapping bookings) THEN the system SHALL log warnings and apply data validation rules
+2. WHEN all courts appear unavailable for an entire day THEN the system SHALL detect this as a potential API edge case
+3. WHEN invalid data is detected THEN the system SHALL attempt to use cached data from the previous successful fetch
+4. WHEN displaying potentially invalid data THEN the system SHALL show appropriate warning messages to users
+
+### Requirement 9
+
+**User Story:** As a system administrator, I want optimized data collection and storage processes, so that the system maintains accurate data efficiently.
+
+#### Acceptance Criteria
+
+1. WHEN scheduling data collection THEN the system SHALL fetch data at optimal times to avoid API edge cases
+2. WHEN storing court data THEN the system SHALL use efficient daily cache file organization
+3. WHEN accessing cached data THEN the system SHALL efficiently locate and load the appropriate cache files
+4. WHEN cleaning up cache THEN the system SHALL easily identify and remove outdated files while maintaining data integrity

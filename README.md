@@ -6,6 +6,7 @@ A Node.js web application that aggregates pickleball court availability from Mes
 
 - **Multi-Park Support**: Aggregates data from Kleinman Park, Gene Autry Park, and Monterey Park
 - **Multiple Calendar Views**: Monthly, weekly, and daily calendar interfaces
+- **Court Utilization Display**: Shows "X/Y courts booked" ratios for each time window
 - **Real-time Updates**: Scheduled data fetching with 24-hour cache freshness
 - **Park Filtering**: Interactive sidebar to filter by specific parks
 - **PDF Calendar Links**: Direct access to official PDF calendars where available
